@@ -63,7 +63,7 @@ namespace Ebur128.BasicTest
 
 
         /// <summary>
-        /// Open the WAV file and get the global loudness.
+        /// Test for the global loudness value of a single file.
         /// </summary>
         [Theory]
         [InlineData("seq-3341-1-16bit.wav", -23.0)]
@@ -77,7 +77,7 @@ namespace Ebur128.BasicTest
         [InlineData("seq-3341-2011-8_seq-3342-6-24bit-v02.wav", -23.0)]
 
         [Trait("Category", "libEbur128")]
-        public void LoudnessGlobalTest1(string filename, double global)
+        public void LoudnessGlobalTest(string filename, double value)
         {
             this._output.WriteLine($"FileName = {filename}");
             this._output.WriteLine($"libebur128 v.{libebur128_net.Ebur128.Version}");
@@ -104,7 +104,232 @@ namespace Ebur128.BasicTest
 
                     double actual = ebur128.LoudnessGlobal();
                     this._output.WriteLine($"LoudnessGlobal = {actual}");
-                    Assert.Equal(global, actual, 1);
+                    Assert.Equal(value, actual, 1);
+                }
+            }
+        }
+
+        /// <summary>
+        /// Test for the loudness range value of a single file.
+        /// </summary>
+        [Theory]
+        [InlineData("seq-3342-1-16bit.wav", 10.0)]
+        [InlineData("seq-3342-2-16bit.wav", 5.0)]
+        [InlineData("seq-3342-3-16bit.wav", 20.0)]
+        [InlineData("seq-3342-4-16bit.wav", 15.0)]
+        [InlineData("seq-3341-7_seq-3342-5-24bit.wav", 5.0)]
+        [InlineData("seq-3341-2011-8_seq-3342-6-24bit-v02.wav", 15.0)]
+        [Trait("Category", "libEbur128")]
+        public void LoudnessRangeTest(string filename, double value)
+        {
+            this._output.WriteLine($"FileName = {filename}");
+            this._output.WriteLine($"libebur128 v.{libebur128_net.Ebur128.Version}");
+            using (WaveFileReader reader = new WaveFileReader(Path.Combine(this._tempararyPath, filename)))
+            {
+                using (libebur128_net.Ebur128 ebur128 = libebur128_net.Ebur128.Init((uint)reader.WaveFormat.Channels, (uint)reader.WaveFormat.SampleRate, Mode.EBUR128_MODE_LRA))
+                {
+
+                    /* example: set channel map (note: see ebur128.h for the default map) */
+                    if (reader.WaveFormat.Channels == 5)
+                    {
+                        ebur128.SetChannelType(0, libebur128Native.channel.EBUR128_LEFT);
+                        ebur128.SetChannelType(1, libebur128Native.channel.EBUR128_RIGHT);
+                        ebur128.SetChannelType(2, libebur128Native.channel.EBUR128_CENTER);
+                        ebur128.SetChannelType(3, libebur128Native.channel.EBUR128_LEFT_SURROUND);
+                        ebur128.SetChannelType(4, libebur128Native.channel.EBUR128_RIGHT_SURROUND);
+                    }
+
+                    for (int i = 0; i < reader.SampleCount; i++)
+                    {
+                        Span<float> sampleFrame = reader.ReadNextSampleFrame();
+                        ebur128.AddFramesFloat(sampleFrame, (uint)1);
+                    }
+
+                    double actual = ebur128.LoudnessRange();
+                    this._output.WriteLine($"LoudnessRange = {actual}");
+                    Assert.Equal(value, actual, 1);
+                }
+            }
+        }
+
+        /// <summary>
+        /// Test for the maximum true loudness peak value of a single file.
+        /// </summary>
+        [Theory]
+        [InlineData("seq-3341-15-24bit.wav.wav", -6.0)]
+        [InlineData("seq-3341-16-24bit.wav.wav", -6.0)]
+        [InlineData("seq-3341-17-24bit.wav.wav", -6.0)]
+        [InlineData("seq-3341-18-24bit.wav.wav", -6.0)]
+        [InlineData("seq-3341-19-24bit.wav.wav", 3.0)]
+        [InlineData("seq-3341-20-24bit.wav.wav", -0.1)]
+        [InlineData("seq-3341-21-24bit.wav.wav", -0.1)]
+        [InlineData("seq-3341-22-24bit.wav.wav", -0.2)]
+        [InlineData("seq-3341-23-24bit.wav.wav", -0.1)]
+        [Trait("Category", "libEbur128")]
+        public void AbsoluteTruePeakTest(string filename, double value)
+        {
+            this._output.WriteLine($"FileName = {filename}");
+            this._output.WriteLine($"libebur128 v.{libebur128_net.Ebur128.Version}");
+            using (WaveFileReader reader = new WaveFileReader(Path.Combine(this._tempararyPath, filename)))
+            {
+                using (libebur128_net.Ebur128 ebur128 = libebur128_net.Ebur128.Init((uint)reader.WaveFormat.Channels, (uint)reader.WaveFormat.SampleRate, Mode.EBUR128_MODE_TRUE_PEAK))
+                {
+
+                    /* example: set channel map (note: see ebur128.h for the default map) */
+                    if (reader.WaveFormat.Channels == 5)
+                    {
+                        ebur128.SetChannelType(0, libebur128Native.channel.EBUR128_LEFT);
+                        ebur128.SetChannelType(1, libebur128Native.channel.EBUR128_RIGHT);
+                        ebur128.SetChannelType(2, libebur128Native.channel.EBUR128_CENTER);
+                        ebur128.SetChannelType(3, libebur128Native.channel.EBUR128_LEFT_SURROUND);
+                        ebur128.SetChannelType(4, libebur128Native.channel.EBUR128_RIGHT_SURROUND);
+                    }
+
+                    for (int i = 0; i < reader.SampleCount; i++)
+                    {
+                        Span<float> sampleFrame = reader.ReadNextSampleFrame();
+                        ebur128.AddFramesFloat(sampleFrame, (uint)1);
+                    }
+
+                    double actual = 20 * Math.Log10(ebur128.AbsoluteTruePeak());
+                    this._output.WriteLine($"AbsoluteTruePeak = {actual}");
+                    Assert.Equal(value, actual, 1);
+                }
+            }
+        }
+
+        /// <summary>
+        /// Test for the loudness value of a single file in momentary (400ms) chunks.
+        /// </summary>
+        [Theory]
+        [InlineData("seq-3341-13-1-24bit.wav", -23.0)]
+        [InlineData("seq-3341-13-2-24bit.wav", -23.0)]
+        [InlineData("seq-3341-13-3-24bit.wav.wav", -23.0)]
+        [InlineData("seq-3341-13-4-24bit.wav.wav", -23.0)]
+        [InlineData("seq-3341-13-5-24bit.wav.wav", -23.0)]
+        [InlineData("seq-3341-13-6-24bit.wav.wav", -23.0)]
+        [InlineData("seq-3341-13-7-24bit.wav.wav", -23.0)]
+        [InlineData("seq-3341-13-8-24bit.wav.wav", -23.0)]
+        [InlineData("seq-3341-13-9-24bit.wav.wav", -23.0)]
+        [InlineData("seq-3341-13-10-24bit.wav.wav", -23.0)]
+        [InlineData("seq-3341-13-11-24bit.wav.wav", -23.0)]
+        [InlineData("seq-3341-13-12-24bit.wav.wav", -23.0)]
+        [InlineData("seq-3341-13-13-24bit.wav.wav", -23.0)]
+        [InlineData("seq-3341-13-14-24bit.wav.wav", -23.0)]
+        [InlineData("seq-3341-13-15-24bit.wav.wav", -23.0)]
+        [InlineData("seq-3341-13-16-24bit.wav.wav", -23.0)]
+        [InlineData("seq-3341-13-17-24bit.wav.wav", -23.0)]
+        [InlineData("seq-3341-13-18-24bit.wav.wav", -23.0)]
+        [InlineData("seq-3341-13-19-24bit.wav.wav", -23.0)]
+        [InlineData("seq-3341-13-20-24bit.wav.wav", -23.0)]
+        [Trait("Category", "libEbur128")]
+        public void LoudnessMomentaryTest(string filename, double value)
+        {
+            this._output.WriteLine($"FileName = {filename}");
+            this._output.WriteLine($"libebur128 v.{libebur128_net.Ebur128.Version}");
+            using (WaveFileReader reader = new WaveFileReader(Path.Combine(this._tempararyPath, filename)))
+            {
+                using (libebur128_net.Ebur128 ebur128 = libebur128_net.Ebur128.Init((uint)reader.WaveFormat.Channels, (uint)reader.WaveFormat.SampleRate, Mode.EBUR128_MODE_M))
+                {
+
+                    /* example: set channel map (note: see ebur128.h for the default map) */
+                    if (reader.WaveFormat.Channels == 5)
+                    {
+                        ebur128.SetChannelType(0, libebur128Native.channel.EBUR128_LEFT);
+                        ebur128.SetChannelType(1, libebur128Native.channel.EBUR128_RIGHT);
+                        ebur128.SetChannelType(2, libebur128Native.channel.EBUR128_CENTER);
+                        ebur128.SetChannelType(3, libebur128Native.channel.EBUR128_LEFT_SURROUND);
+                        ebur128.SetChannelType(4, libebur128Native.channel.EBUR128_RIGHT_SURROUND);
+                    }
+
+                    double maxMomentary = float.MinValue;
+                    for (int i = 0, refreshRate = 0; i < reader.SampleCount ; i++, refreshRate++)
+                    {
+                        Span<float> sampleFrame = reader.ReadNextSampleFrame();
+                        ebur128.AddFramesFloat(sampleFrame, (uint)1);
+
+                        //  10 ms buffer / 10 Hz refresh rate.
+                        if (refreshRate >= reader.WaveFormat.SampleRate / 100)
+                        {
+                            // # Invalid results before the first 400 miliseconds.
+                            if (i >= (4 * reader.WaveFormat.SampleRate / 10))
+                            {
+                                maxMomentary = Math.Max(ebur128.LoudnessMomentary(), maxMomentary);
+                            }
+                            refreshRate = 0;
+                        }
+                    }
+
+                    this._output.WriteLine($"LoudnessMomentary = {maxMomentary}");
+                    Assert.Equal(value, maxMomentary, 1);
+                }
+            }
+        }
+
+        /// <summary>
+        /// Test for the loudness value of a single file in short-term (3s) chunks.
+        /// </summary>
+        [Theory]
+        [InlineData("seq-3341-10-1-24bit.wav", -23.0)]
+        [InlineData("seq-3341-10-2-24bit.wav", -23.0)]
+        [InlineData("seq-3341-10-3-24bit.wav", -23.0)]
+        [InlineData("seq-3341-10-4-24bit.wav", -23.0)]
+        [InlineData("seq-3341-10-5-24bit.wav", -23.0)]
+        [InlineData("seq-3341-10-6-24bit.wav", -23.0)]
+        [InlineData("seq-3341-10-7-24bit.wav", -23.0)]
+        [InlineData("seq-3341-10-8-24bit.wav", -23.0)]
+        [InlineData("seq-3341-10-9-24bit.wav", -23.0)]
+        [InlineData("seq-3341-10-10-24bit.wav", -23.0)]
+        [InlineData("seq-3341-10-11-24bit.wav", -23.0)]
+        [InlineData("seq-3341-10-12-24bit.wav", -23.0)]
+        [InlineData("seq-3341-10-13-24bit.wav", -23.0)]
+        [InlineData("seq-3341-10-14-24bit.wav", -23.0)]
+        [InlineData("seq-3341-10-15-24bit.wav", -23.0)]
+        [InlineData("seq-3341-10-16-24bit.wav", -23.0)]
+        [InlineData("seq-3341-10-17-24bit.wav", -23.0)]
+        [InlineData("seq-3341-10-18-24bit.wav", -23.0)]
+        [InlineData("seq-3341-10-19-24bit.wav", -23.0)]
+        [InlineData("seq-3341-10-20-24bit.wav", -23.0)]
+        [Trait("Category", "libEbur128")]
+        public void LoudnessShorttermTest(string filename, double value)
+        {
+            this._output.WriteLine($"FileName = {filename}");
+            this._output.WriteLine($"libebur128 v.{libebur128_net.Ebur128.Version}");
+            using (WaveFileReader reader = new WaveFileReader(Path.Combine(this._tempararyPath, filename)))
+            {
+                using (libebur128_net.Ebur128 ebur128 = libebur128_net.Ebur128.Init((uint)reader.WaveFormat.Channels, (uint)reader.WaveFormat.SampleRate, Mode.EBUR128_MODE_S))
+                {
+
+                    /* example: set channel map (note: see ebur128.h for the default map) */
+                    if (reader.WaveFormat.Channels == 5)
+                    {
+                        ebur128.SetChannelType(0, libebur128Native.channel.EBUR128_LEFT);
+                        ebur128.SetChannelType(1, libebur128Native.channel.EBUR128_RIGHT);
+                        ebur128.SetChannelType(2, libebur128Native.channel.EBUR128_CENTER);
+                        ebur128.SetChannelType(3, libebur128Native.channel.EBUR128_LEFT_SURROUND);
+                        ebur128.SetChannelType(4, libebur128Native.channel.EBUR128_RIGHT_SURROUND);
+                    }
+
+                    double maxShortterm = float.MinValue;
+                    for (int i = 0, refreshRate = 0; i < reader.SampleCount; i++, refreshRate++)
+                    {
+                        Span<float> sampleFrame = reader.ReadNextSampleFrame();
+                        ebur128.AddFramesFloat(sampleFrame, (uint)1);
+
+                        //  10 ms buffer / 10 Hz refresh rate.
+                        if (refreshRate >= reader.WaveFormat.SampleRate / 100)
+                        {
+                            // # Invalid results before the first 3 seconds.
+                            if (i >= (3 * reader.WaveFormat.SampleRate))
+                            {
+                                maxShortterm = Math.Max(ebur128.LoudnessShortterm(), maxShortterm);
+                            }
+                            refreshRate = 0;
+                        }
+                    }
+
+                    this._output.WriteLine($"LoudnessShortterm = {maxShortterm}");
+                    Assert.Equal(value, maxShortterm, 1);
                 }
             }
         }

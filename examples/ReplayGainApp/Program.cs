@@ -3,22 +3,18 @@ using libebur128_net;
 using libebur128_net.libebur128;
 using NAudio.Wave;
 using System.Runtime.InteropServices;
-using Mode = libebur128_net.libebur128.libebur128Native.mode;
-
-
 
 Console.WriteLine("Current directory: " + Environment.CurrentDirectory);
 Console.WriteLine("Runnung in {0}-bit mode.", Environment.Is64BitProcess ? "64" : "32");
 
-Console.WriteLine("Press enter to continue.");
-Console.ReadLine();
-
-
 string filename = args[0];
-
 Console.WriteLine($"FileName = { filename }");
 Console.WriteLine($"libebur128 v.{libebur128_net.Ebur128.Version}");
 
+if (!File.Exists(filename))
+{
+    throw new ApplicationException($"The file does not exist.");
+}
 
 using (WaveFileReader reader = new WaveFileReader(Path.Combine(filename)))
 {
@@ -46,27 +42,26 @@ using (WaveFileReader reader = new WaveFileReader(Path.Combine(filename)))
             ebur128.AddFramesFloat(sampleFrame, (uint)1);
         }
 
+        Console.WriteLine("");
+        Console.WriteLine("Summary:");
 
-        Console.WriteLine(String.Format("Integrated: {0,10:0.##} LUFS",
-            ebur128.LoudnessGlobal()));
+        Console.WriteLine("");
+        Console.WriteLine("  Integrated loudness:");
+        Console.WriteLine(String.Format("    {0,-10} {1:0.#} LUFS", "I:", ebur128.LoudnessGlobal()));
+        Console.WriteLine(String.Format("    {0,-10} {1:0.#} LUFS", "Threshold:", ebur128.RelativeThreshold()));
 
-        Console.WriteLine(String.Format("Threshold: {0,10:0.##} LUFS",
-            ebur128.RelativeThreshold()));
+        Console.WriteLine("");
+        Console.WriteLine("  Loudness range:");
+        Console.WriteLine(String.Format("    {0,-10} {1:0.#} LU", "LRA:", ebur128.LoudnessRange()));
 
-        Console.WriteLine(String.Format("LRA: {0,10:0.##} LU",
-            ebur128.LoudnessRange()));
 
-        Console.WriteLine(String.Format("Momentary max: {0,10:0.##} LUFS",
-            ebur128.LoudnessMomentary()));
-
-        Console.WriteLine(String.Format("Short-term max: {0,10:0.##} LUFS",
-            ebur128.LoudnessShortterm()));
-
+        Console.WriteLine("");
+        Console.WriteLine("  True peak:");
         var maxTruePeak = 20 * Math.Log10(ebur128.AbsoluteTruePeak());
-        Console.WriteLine(String.Format("True Peak: {0,10:0.##} dBTP", maxTruePeak));
+        Console.WriteLine(String.Format("    {0,-10} {1:0.#} dBTP", "Peak:", maxTruePeak));
 
-        var maxSamplePeak = 20 * Math.Log10(ebur128.AbsoluteSamplePeak());
-        Console.WriteLine(String.Format("Sample Peak: {0,10:0.##} dBFS", maxSamplePeak));
+        Console.WriteLine("");
+        Console.WriteLine("");
     }
 }
 

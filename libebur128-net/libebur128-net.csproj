@@ -11,6 +11,7 @@
     <RepositoryUrl>https://github.com/freehand-dev/libebur128-net.git</RepositoryUrl>
     <Authors>Oleksandr Nazaruk</Authors>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <Description>Cross platform .NET wrapper for the libebur128.</Description>
   </PropertyGroup>
 
   <ItemGroup>
