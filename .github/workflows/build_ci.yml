@@ -1,4 +1,4 @@
-name: Master - CI
+name: Build
 
 on:
   push:
@@ -23,5 +23,3 @@ jobs:
       run: dotnet restore
     - name: Build
       run: dotnet build libebur128-net
-    - name: Test
-      run: dotnet test
