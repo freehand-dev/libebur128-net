@@ -17,6 +17,8 @@ jobs:
       uses: actions/setup-dotnet@v2
       with:
         dotnet-version: 6.0.x
+    - name: Install libebur128
+      run: sudo apt-get install -y libebur128-dev
     - name: Restore dependencies
       run: dotnet restore
     - name: Build
