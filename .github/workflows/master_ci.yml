@@ -22,6 +22,6 @@ jobs:
     - name: Restore dependencies
       run: dotnet restore
     - name: Build
-      run: dotnet build --configuration Release --framework net6.0
+      run: dotnet build
     - name: Test
       run: dotnet test
